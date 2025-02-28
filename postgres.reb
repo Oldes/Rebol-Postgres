@@ -435,6 +435,11 @@ sys/make-scheme [
 				port: spec/port
 				ref:  rejoin [tcp:// host #":" port]
 			]
+
+			;; `ref` is used in logging and errors
+			;; reconstruct it so password is not visible!
+            spec/ref: as url! ajoin [spec/scheme "://" select spec 'user #"@" spec/host #":" spec/port]
+
 			conn/parent: port
 			conn/awake: :pg-conn-awake
 			open conn
@@ -468,8 +473,7 @@ sys/make-scheme [
 			/local ctx
 		][
 			unless open? port [
-				print "not open"
-				return none
+				cause-error 'Access 'not-open port/spec/ref
 			]
 			ctx: port/extra
 			if string? data [
@@ -494,16 +498,11 @@ sys/make-scheme [
 				;@@ TODO: improve!
 				return case [
 					ctx/error [
-						make error! [
-							type: 'Access
-							id: 'Protocol
-							arg1: ctx/error
-						]
+						cause-error 'Access 'Protocol ctx/error
 					]
 					ctx/CommandComplete [ ctx/Data ]
 				]
 			]
-			port
 		]
 		
 		read: func [

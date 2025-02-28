@@ -18,4 +18,9 @@ system/options/log/postgres: 3
 pg: open postgres://postgress:password@localhost
 probe write pg "SELECT version();"
 probe write pg "SELECT datname FROM pg_database WHERE datistemplate = false;"
-probe write pg "SELECT unknown_function();"
+try/with [write pg "SELECT unknown_function();"] :print
+close pg
+probe open? pg
+try/with [write pg "SELECT version();"] :print
+print-horizontal-line
+print "DONE"
