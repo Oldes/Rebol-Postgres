@@ -1,0 +1,12 @@
+/*
+!/.gitignore
+!/.github
+!/.editorconfig
+!/rebol
+!/src
+!/*.nest
+!/sqlite
+!README.md
+!LICENSE
+!ci-test.r3
+!sqlite-scheme.reb
