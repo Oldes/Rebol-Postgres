@@ -3,7 +3,8 @@
 # Rebol/Postgres
 
 
-[PostgresSQL](https://www.postgresql.org/) extension for [Rebol3](https://github.com/Siskin-framework/Rebol)
+[PostgreSQL](https://www.postgresql.org/) protocol scheme for [Rebol3](https://github.com/Siskin-framework/Rebol)
 
-Current state of the extension is under development and may be changed in any moment.
+Current state of the scheme is under development and may be changed in any moment.
+
 For usage example see the [test file](ci-test.r3).
