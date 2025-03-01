@@ -102,6 +102,27 @@ que-packet: function[
 	]
 ]
 
+error-fields: #[
+	0#53 localized-severity   ;= S
+	0#56 severity             ;= V
+	0#43 sql-state            ;= C
+	0#4D message              ;= M
+	0#44 detail               ;= D
+	0#48 hint                 ;= H
+	0#50 position             ;= P
+	0#70 internal-position    ;= p
+	0#71 internal-query       ;= q
+	0#57 where                ;= W
+	0#73 schema-name          ;= s
+	0#74 table-name           ;= t
+	0#63 column-name          ;= c
+	0#64 datatype-name        ;= d
+	0#6E constraint-name      ;= n
+	0#46 file                 ;= F
+	0#4C line                 ;= L
+	0#52 routine              ;= R
+]
+
 process-responses: function[
 	;- Process all incoming data.
 	ctx [object!]
@@ -223,11 +244,15 @@ process-responses: function[
 				sys/log/more 'POSTGRES ["Command completed:^[[m" tmp]
 			]
 			#"E" [
-				err: parse-error to string! binary/read bin 'bytes
-
-				sys/log/debug 'POSTGRES ["ERROR:" mold err]
-				sys/log/error 'POSTGRES [err/message]
-				ctx/error: err/message
+				err: clear []
+				while [0 != type: binary/read bin 'UI8][
+					repend err [
+						select error-fields type
+						binary/read bin 'STRING
+					]
+				]
+				ctx/error: make map! err
+				sys/log/error 'POSTGRES any [select err 'message "Malformed error message"]
 			]
 			#"S" [
 				;; Identifies the message as a run-time parameter status report.
@@ -258,43 +283,6 @@ process-responses: function[
 	;; Return true if the input buffer is empty
 	tail? bin/buffer
 ]
-
-parse-error: funct/with [input [string!]] [
-	clear error
-	either parse input [
-		some [
-			"S" c-string= (fill localized-severity)
-		|	"V" c-string= (fill severity)
-		|	"C" c-string= (fill sql-state)
-		|	"M" c-string= (fill message)
-		|	"D" c-string= (fill detail)
-		|	"H" c-string= (fill hint)
-		|	"P" c-string= (fill position)
-		|	"p" c-string= (fill internal-position)
-		|	"q" c-string= (fill internal-query)
-		|	"W" c-string= (fill where)
-		|	"s" c-string= (fill schema-name)
-		|	"t" c-string= (fill table-name)
-		|	"c" c-string= (fill column-name)
-		|	"d" c-string= (fill datatype-name)
-		|	"n" c-string= (fill constraint-name)
-		|	"F" c-string= (fill file)
-		|	"L" c-string= (fill line)
-		|	"R" c-string= (fill routine)
-		]
-		null
-	][
-		make map! error
-	][
-		make error! "Malformed error message"
-	]
-][
-	error: make block! 8
-	value: none
-	c-string=: [copy value to null skip]
-	fill: func ['field] [repend error [field value]]
-]
-
 
 pg-conn-awake: function [event][
 	conn:  event/port  ;; The real TCP connection

@@ -1,0 +1,35 @@
+name: 'Rebol-Postgres CI'
+on:
+  # Triggers the workflow on push or pull request events but only for the master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Install Rebol
+      uses: oldes/install-rebol@v3.18.0
+
+    - name: Download PostgreSQL Docker container
+      run: docker pull postgres
+
+    - name: Start PostgreSQL Docker image
+      run: docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=password postgres
+
+    - name: Test Rebol/Postgres protocol
+      run: ./rebol3 ci-test.r3
+
+    - name: Stop PostgreSQL Docker container
+      run:  docker stop postgres
+
+    - name: Remove PostgreSQL Docker container
+      run:  docker rm postgres
