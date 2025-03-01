@@ -17,7 +17,7 @@ system/options/log/postgres: 3
 
 ;- Get IP of the Docker container with a running Postgres server
 call/shell/output "docker ps" tmp: ""
-parse out [thru "postgres" 55 skip copy host: to #":" to end]
+parse tmp [thru "postgres" 55 skip copy host: to #":" to end]
 if host == "0.0.0.0" [host: "localhost"]
 
 pg: open join postgres://postgress:password@ :host

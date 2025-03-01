@@ -23,6 +23,7 @@ jobs:
       run: |
         docker pull postgres
         docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=password postgres
+        docker ps
         ./rebol3 ci-test.r3
         docker stop postgres
         docker rm postgres
