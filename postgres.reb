@@ -388,7 +388,7 @@ sys/make-scheme [
 			spec: port/spec
 			;? spec
 
-			port/extra: object [	
+			port/extra: object [
 				connection:
 				awake: :port/awake
 				state: none
@@ -405,8 +405,8 @@ sys/make-scheme [
 				CommandComplete: none
 				sasl: context [
 					;; input values...
-					user:     any [spec/user "postgres"]
-					password: any [spec/pass "postgres"]
+					user:     any [select spec 'user "postgres"]
+					password: any [select spec 'pass "postgres"]
 					mechanisms: copy []
 					salt: none
 					iterations: 4096
