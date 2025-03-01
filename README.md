@@ -1,3 +1,4 @@
+[![Rebol-Postgres CI](https://github.com/Oldes/Rebol-Postgres/actions/workflows/main.yml/badge.svg)](https://github.com/Oldes/Rebol-Postgres/actions/workflows/main.yml)
 [![Gitter](https://badges.gitter.im/rebol3/community.svg)](https://gitter.im/rebol3/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 # Rebol/Postgres
