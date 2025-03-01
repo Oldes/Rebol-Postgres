@@ -19,17 +19,10 @@ jobs:
     - name: Install Rebol
       uses: oldes/install-rebol@v3.18.0
 
-    - name: Download PostgreSQL Docker container
-      run: docker pull postgres
-
-    - name: Start PostgreSQL Docker image
-      run: docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=password postgres
-
     - name: Test Rebol/Postgres protocol
-      run: ./rebol3 ci-test.r3
-
-    - name: Stop PostgreSQL Docker container
-      run:  docker stop postgres
-
-    - name: Remove PostgreSQL Docker container
-      run:  docker rm postgres
+      run: |
+        docker pull postgres
+        docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=password postgres
+        ./rebol3 ci-test.r3
+        docker stop postgres
+        docker rm postgres
