@@ -259,14 +259,10 @@ process-responses: function[
 	tail? bin/buffer
 ]
 
-parse-error: funct [input [string!]] [
-	error: make map! []
-	value: none
-	c-string=: [copy value to null skip]
-	fill: func ['field] [put error field value]
-	unless parse input [
+parse-error: funct/with [input [string!]] [
+	clear error
+	either parse input [
 		some [
-		pos: (probe pos)
 			"S" c-string= (fill localized-severity)
 		|	"V" c-string= (fill severity)
 		|	"C" c-string= (fill sql-state)
@@ -287,11 +283,18 @@ parse-error: funct [input [string!]] [
 		|	"R" c-string= (fill routine)
 		]
 		null
-	] [
-		error: #[message: "Malformed error message"]
+	][
+		make map! error
+	][
+		make error! "Malformed error message"
 	]
-	error
+][
+	error: make block! 8
+	value: none
+	c-string=: [copy value to null skip]
+	fill: func ['field] [repend error [field value]]
 ]
+
 
 pg-conn-awake: function [event][
 	conn:  event/port  ;; The real TCP connection
