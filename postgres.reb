@@ -287,7 +287,9 @@ parse-error: funct [input [string!]] [
 		|	"R" c-string= (fill routine)
 		]
 		null
-	] [do make error! "Malformed error message"]
+	] [
+		error: #[message: "Malformed error message"]
+	]
 	error
 ]
 
