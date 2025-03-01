@@ -15,12 +15,42 @@ pgsql: import %postgres.reb
 
 system/options/log/postgres: 3
 
-pg: open postgres://postgress:password@localhost
-probe write pg "SELECT version();"
-probe write pg "SELECT datname FROM pg_database WHERE datistemplate = false;"
-try/with [write pg "SELECT unknown_function();"] :print
-close pg
-probe open? pg
-try/with [write pg "SELECT version();"] :print
-print-horizontal-line
+foreach [title code] [
+	"Opening a connection" [
+		pg: open postgres://postgress:password@localhost
+	]
+
+	"Simple query (get PostgreSQL version)" [
+		probe write pg "SELECT version();"
+	]
+
+	"Simple query (get list of all databases)" [
+		probe write pg "SELECT datname FROM pg_database WHERE datistemplate = false;"
+	]
+
+	"Trying to call a not existing function (error expected)" [
+		try/with [write pg "SELECT unknown_function();"] :print
+	]
+
+	"Closing the connection" [
+		close pg
+	]
+
+	"Testing that the connection is closed" [
+		probe open? pg
+	]
+
+	"Trying to write to the closed connection (error expected)" [
+		try/with [write pg "SELECT version();"] :print
+	]
+
+][
+	print-horizontal-line
+	print as-yellow title
+	print as-blue form code
+	prin LF
+	do code
+]
+
+
 print "DONE"
