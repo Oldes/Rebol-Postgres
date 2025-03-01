@@ -50,7 +50,6 @@ foreach [title code] [
 	print as-yellow join ";; " title
 	prin as-red ">> "
 	print as-white mold/only code
-	prin LF
 	set/any 'result try code
 	either error? :result [
 		print result
