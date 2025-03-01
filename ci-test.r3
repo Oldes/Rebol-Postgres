@@ -15,7 +15,12 @@ pgsql: import %postgres.reb
 
 system/options/log/postgres: 3
 
-pg: open postgres://postgress:password@localhost
+;- Get IP of the Docker container with a running Postgres server
+call/shell/output "docker ps" tmp: ""
+parse out [thru "postgres" 55 skip copy host: to #":" to end]
+if host == "0.0.0.0" [host: "localhost"]
+
+pg: open join postgres://postgress:password@ :host
 probe write pg "SELECT version();"
 probe write pg "SELECT datname FROM pg_database WHERE datistemplate = false;"
 try/with [write pg "SELECT unknown_function();"] :print
