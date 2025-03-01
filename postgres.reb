@@ -223,14 +223,11 @@ process-responses: function[
 				sys/log/more 'POSTGRES ["Command completed:^[[m" tmp]
 			]
 			#"E" [
-				err: clear []
-				while [0 != type: binary/read bin 'UI8][
-					append err type
-					append err binary/read bin 'STRING
-				]
+				err: parse-error to string! binary/read bin 'bytes
+
 				sys/log/debug 'POSTGRES ["ERROR:" mold err]
-				sys/log/error 'POSTGRES [err/8]
-				ctx/error: err/8
+				sys/log/error 'POSTGRES [err/message]
+				ctx/error: err/message
 			]
 			#"S" [
 				;; Identifies the message as a run-time parameter status report.
@@ -262,7 +259,37 @@ process-responses: function[
 	tail? bin/buffer
 ]
 
-
+parse-error: funct [input [string!]] [
+	error: make map! []
+	value: none
+	c-string=: [copy value to null skip]
+	fill: func ['field] [put error field value]
+	unless parse input [
+		some [
+		pos: (probe pos)
+			"S" c-string= (fill localized-severity)
+		|	"V" c-string= (fill severity)
+		|	"C" c-string= (fill sql-state)
+		|	"M" c-string= (fill message)
+		|	"D" c-string= (fill detail)
+		|	"H" c-string= (fill hint)
+		|	"P" c-string= (fill position)
+		|	"p" c-string= (fill internal-position)
+		|	"q" c-string= (fill internal-query)
+		|	"W" c-string= (fill where)
+		|	"s" c-string= (fill schema-name)
+		|	"t" c-string= (fill table-name)
+		|	"c" c-string= (fill column-name)
+		|	"d" c-string= (fill datatype-name)
+		|	"n" c-string= (fill constraint-name)
+		|	"F" c-string= (fill file)
+		|	"L" c-string= (fill line)
+		|	"R" c-string= (fill routine)
+		]
+		null
+	] [do make error! "Malformed error message"]
+	error
+]
 
 pg-conn-awake: function [event][
 	conn:  event/port  ;; The real TCP connection
