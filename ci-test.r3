@@ -21,15 +21,15 @@ foreach [title code] [
 	]
 
 	"Simple query (get PostgreSQL version)" [
-		probe write pg "SELECT version();"
+		write pg "SELECT version();"
 	]
 
 	"Simple query (get list of all databases)" [
-		probe write pg "SELECT datname FROM pg_database WHERE datistemplate = false;"
+		write pg "SELECT datname FROM pg_database WHERE datistemplate = false;"
 	]
 
 	"Trying to call a not existing function (error expected)" [
-		try/with [write pg "SELECT unknown_function();"] :print
+		write pg "SELECT unknown_function();"
 	]
 
 	"Closing the connection" [
@@ -37,19 +37,26 @@ foreach [title code] [
 	]
 
 	"Testing that the connection is closed" [
-		probe open? pg
+		open? pg
 	]
 
 	"Trying to write to the closed connection (error expected)" [
-		try/with [write pg "SELECT version();"] :print
+		write pg "SELECT version();"
 	]
 
 ][
-	print-horizontal-line
-	print as-yellow title
-	print as-blue form code
 	prin LF
-	do code
+	print-horizontal-line
+	print as-yellow join ";; " title
+	prin as-red ">> "
+	print as-white mold/only code
+	prin LF
+	set/any 'result try code
+	either error? :result [
+		print result
+	][
+		print as-green ellipsize ajoin ["== " mold :result] 300
+	]
 ]
 
 
