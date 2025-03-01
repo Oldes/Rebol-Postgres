@@ -12,6 +12,21 @@ on:
 jobs:
   linux:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17  # Specify the version
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
@@ -19,11 +34,15 @@ jobs:
     - name: Install Rebol
       uses: oldes/install-rebol@v3.18.0
 
-    - name: Test Rebol/Postgres protocol
+    - name: Install PostgreSQL client
+      run: sudo apt-get install -y postgresql-client
+
+    - name: Wait for PostgreSQL to be ready
       run: |
-        docker pull postgres
-        docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=password postgres
-        docker ps
-        ./rebol3 ci-test.r3
-        docker stop postgres
-        docker rm postgres
+        until pg_isready -h localhost -p 5432 -U testuser; do
+          echo "Waiting for PostgreSQL..."
+          sleep 2
+        done
+
+    - name: Test Rebol/Postgres protocol
+      run: ./rebol3 ci-test.r3
