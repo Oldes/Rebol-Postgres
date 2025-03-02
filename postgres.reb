@@ -490,27 +490,35 @@ sys/make-scheme [
 
 		write: func [
 			port [port!]
-			data
+			data [string! word!]
 			/local ctx
 		][
 			unless open? port [
 				cause-error 'Access 'not-open port/spec/ref
 			]
 			ctx: port/extra
-			if string? data [
-				ctx/error: none
-				ctx/CommandComplete: none
-				clear ctx/Data
-				clear ctx/RowDescription
-
-				que-packet ctx #"Q" join data null
-				if all [
-					ctx/ReadyForQuery
-					port/state = 'READY
-				][
-					port/state: 'WRITE
-					write ctx/connection take/part ctx/out-buffer 32000
+			ctx/error: none
+			ctx/CommandComplete: none
+			clear ctx/Data
+			clear ctx/RowDescription
+			case [
+				string? data [
+					que-packet ctx #"Q" join data null
 				]
+				word? data [
+					switch data [
+						SYNC      [ que-packet ctx #"S" "" ]
+						TERMINATE [ que-packet ctx #"X" "Good bye!" ]
+					]
+				]
+			]
+
+			if all [
+				ctx/ReadyForQuery
+				port/state = 'READY
+			][
+				port/state: 'WRITE
+				write ctx/connection take/part ctx/out-buffer 32000
 			]
 			if all [
 				ctx/sync-read?

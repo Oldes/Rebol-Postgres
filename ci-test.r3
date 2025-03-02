@@ -28,6 +28,10 @@ foreach [title code] [
 		write pg "SELECT datname FROM pg_database WHERE datistemplate = false;"
 	]
 
+	"Sending a SYNC message" [
+		write pg 'SYNC
+	]
+
 	"Trying to call a not existing function (error expected)" [
 		write pg "SELECT unknown_function();"
 	]
@@ -42,6 +46,14 @@ foreach [title code] [
 
 	"Trying to write to the closed connection (error expected)" [
 		write pg "SELECT version();"
+	]
+
+	"Reopening the connection" [
+		pg: open pg
+	]
+
+	"Sending a TERMINATE message" [
+		write pg 'TERMINATE
 	]
 
 ][
