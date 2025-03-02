@@ -247,19 +247,20 @@ process-responses: function[
 			#"E"
 			#"N" [
 				err: clear []
-				while [0 != type: binary/read bin 'UI8][
+				while [0 != field: binary/read bin 'UI8][
 					repend err [
-						select error-fields type
+						select error-fields field
 						binary/read bin 'STRING
 					]
 				]
+				? type
 				switch type [
 					#"E" [
 						ctx/error: make map! err
 						sys/log/error 'POSTGRES any [select err 'message "Malformed error message"]
 					]
 					#"N" [
-						sys/log/info 'POSTGRES ["NOTICE:" err]
+						sys/log/info 'POSTGRES ["NOTICE:" select err 'message]
 					]
 				]
 			]
