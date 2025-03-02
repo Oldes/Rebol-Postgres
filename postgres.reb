@@ -244,7 +244,8 @@ process-responses: function[
 				ctx/CommandComplete: tmp: to string! binary/read bin len - 4
 				sys/log/more 'POSTGRES ["Command completed:^[[m" tmp]
 			]
-			#"E" [
+			#"E"
+			#"N" [
 				err: clear []
 				while [0 != type: binary/read bin 'UI8][
 					repend err [
@@ -252,8 +253,15 @@ process-responses: function[
 						binary/read bin 'STRING
 					]
 				]
-				ctx/error: make map! err
-				sys/log/error 'POSTGRES any [select err 'message "Malformed error message"]
+				switch type [
+					#"E" [
+						ctx/error: make map! err
+						sys/log/error 'POSTGRES any [select err 'message "Malformed error message"]
+					]
+					#"N" [
+						sys/log/info 'POSTGRES ["NOTICE:" err]
+					]
+				]
 			]
 			#"S" [
 				;; Identifies the message as a run-time parameter status report.
