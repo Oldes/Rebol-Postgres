@@ -253,7 +253,6 @@ process-responses: function[
 						binary/read bin 'STRING
 					]
 				]
-				? type
 				switch type [
 					#"E" [
 						ctx/error: make map! err
