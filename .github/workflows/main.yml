@@ -34,12 +34,5 @@ jobs:
     - name: Install Rebol
       uses: oldes/install-rebol@v3.18.0
 
-    - name: Wait for PostgreSQL to be ready
-      run: |
-        until pg_isready -h localhost -p 5432 -U postgres; do
-          echo "Waiting for PostgreSQL..."
-          sleep 2
-        done
-
     - name: Test Rebol/Postgres protocol
       run: ./rebol3 ci-test.r3
