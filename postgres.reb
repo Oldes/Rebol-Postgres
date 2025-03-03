@@ -253,14 +253,11 @@ process-responses: function[
 						binary/read bin 'STRING
 					]
 				]
-				switch type [
-					#"E" [
-						ctx/error: make map! err
-						sys/log/error 'POSTGRES any [select err 'message "Malformed error message"]
-					]
-					#"N" [
-						sys/log/info 'POSTGRES ["NOTICE:" select err 'message]
-					]
+				either type == #"E" [
+					ctx/error: make map! err
+					sys/log/error 'POSTGRES any [select err 'message "Malformed error message"]
+				][
+					sys/log/info 'POSTGRES ["NOTICE:" select err 'message]
 				]
 			]
 			#"S" [
