@@ -24,6 +24,9 @@ foreach [title code] [
 		write pg "SELECT version();"
 	]
 
+	"Try select from a non existing table." [
+		try/with [write pg {SELECT * FROM nonexistingtable;}] :print
+	]
 	"Simple query (get list of all databases)" [
 		write pg "SELECT datname FROM pg_database WHERE datistemplate = false;"
 	]

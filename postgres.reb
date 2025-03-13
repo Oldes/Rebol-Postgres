@@ -532,6 +532,7 @@ sys/make-scheme [
 				;@@ TODO: improve!
 				return case [
 					ctx/error [
+						port/state: 'READY
 						cause-error 'Access 'Protocol ctx/error
 					]
 					ctx/CommandComplete [ ctx/Data ]
