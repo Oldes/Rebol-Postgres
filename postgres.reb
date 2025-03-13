@@ -428,7 +428,7 @@ sys/make-scheme [
 				out-buffer: make binary! 1000
 				inp-buffer: make binary! 1000
 				authenticated?: false
-				sync-read?: true
+				async?: false
 				CancelKeyData:
 				ReadyForQuery: none
 				RowDescription: make block! 20
@@ -530,9 +530,9 @@ sys/make-scheme [
 				port/state: 'WRITE
 				write ctx/connection take/part ctx/out-buffer 32000
 			]
-			if ctx/sync-read? [
+			unless ctx/async? [
 				unless wait [port port/spec/timeout][
-					cause-error 'Access 'Timeout
+					cause-error 'Access 'Timeout []
 				]
 				;@@ TODO: improve!
 				return case [
