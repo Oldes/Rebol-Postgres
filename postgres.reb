@@ -2,8 +2,8 @@ Rebol [
 	Name:    postgres
 	Type:    module
 	Options: [delay]
-	Version: 0.1.0
-	Date:    28-Feb-2025
+	Version: 0.1.1
+	Date:    13-Mar-2025
 	File:    %postgres.reb
 	Title:   "PostgresSQL protocol scheme"
 	Author:  [@Oldes @Rebolek]
@@ -532,7 +532,8 @@ sys/make-scheme [
 			]
 			unless ctx/async? [
 				unless wait [port port/spec/timeout][
-					cause-error 'Access 'Timeout []
+					;; wait returns none in case of timeout...
+					cause-error 'Access 'Timeout port/spec/ref
 				]
 				;@@ TODO: improve!
 				return case [
