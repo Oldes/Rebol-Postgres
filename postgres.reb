@@ -16,6 +16,11 @@ Rebol [
 	Notes: {
 		* https://www.postgresql.org/docs/current/protocol-flow.html
 		* https://www.postgresql.org/docs/current/protocol-message-formats.html
+
+		Postgres server may be started using Docker with command:
+		```
+		docker run -d --name postgres -p 5432:5432 -e POSTGRES_PASSWORD=password postgres
+		```
 	}
 	Usage: [
 		pg: open postgres://postgress:password@localhost
@@ -525,10 +530,10 @@ sys/make-scheme [
 				port/state: 'WRITE
 				write ctx/connection take/part ctx/out-buffer 32000
 			]
-			if all [
-				ctx/sync-read?
-				port? wait [port port/spec/timeout]
-			][
+			if ctx/sync-read? [
+				unless wait [port port/spec/timeout][
+					cause-error 'Access 'Timeout
+				]
 				;@@ TODO: improve!
 				return case [
 					ctx/error [
