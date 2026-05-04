@@ -1033,19 +1033,18 @@ build-result: func [
 			row-count: to integer! last parts
 		]
 	]
-	;; compose/only is required here: rows, cols and notices are all blocks.
-	;; Plain compose would splice their contents into the map literal instead
-	;; of inserting each block as a single value.
-	result: compose/only #[
-		rows: (rows)
-		columns: (cols)
-		command-tag: (tag)
-		row-count: (row-count)
-		notices: (ctx/notices)
-		runtime: (rt)
-		row-mode: (select ctx/options 'row-mode)
-		decode: (select ctx/options 'decode)
-		more?: (to logic! ctx/PortalSuspended?)
+	; Build via key/value reduction to avoid compose/map literal edge-cases
+	; across different Rebol builds used in CI.
+	result: make map! reduce [
+		'rows       rows
+		'columns    cols
+		'command-tag tag
+		'row-count  row-count
+		'notices    ctx/notices
+		'runtime    rt
+		'row-mode   select ctx/options 'row-mode
+		'decode     select ctx/options 'decode
+		'more?      to logic! ctx/PortalSuspended?
 	]
 	ctx/last-result: result
 	result
