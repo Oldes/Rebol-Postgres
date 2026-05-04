@@ -1,38 +1,169 @@
-name: 'Rebol-Postgres CI'
+name: "Rebol-Postgres CI"
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    # Triggers the workflow on push or pull request events but only for the main branch
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    # Allows you to run this workflow manually from the Actions tab
+    workflow_dispatch:
 
 jobs:
-  linux:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:17  # Specify the version
-        env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: password
-          POSTGRES_DB: postgres
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd="pg_isready -U postgres"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+    linux:
+        runs-on: ubuntu-latest
+        strategy:
+            fail-fast: false
+            matrix:
+                pg_version: [16, 17]
+        services:
+            postgres:
+                image: postgres:${{ matrix.pg_version }}
+                env:
+                    POSTGRES_USER: postgres
+                    POSTGRES_PASSWORD: password
+                    POSTGRES_DB: postgres
+                ports:
+                    - 5432:5432
+                options: >-
+                    --health-cmd="pg_isready -U postgres"
+                    --health-interval=10s
+                    --health-timeout=5s
+                    --health-retries=5
 
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
-    - name: Install Rebol
-      uses: oldes/install-rebol@v3.18.0
+            - name: Install Rebol
+              uses: oldes/install-rebol@v3.18.0
 
-    - name: Test Rebol/Postgres protocol
-      run: ./rebol3 ci-test.r3
+            - name: Test Rebol/Postgres protocol
+              run: ./rebol3 ci-test.r3
+
+            - name: Focused tests (errors)
+              run: ./rebol3 ci-errors.r3
+
+            - name: Focused tests (decode)
+              env:
+                  PG_URL: postgres://postgres:password@localhost/postgres
+              run: ./rebol3 ci-decode.r3
+
+            - name: Focused tests (auth smoke)
+              env:
+                  PG_URL: postgres://postgres:password@localhost/postgres
+              run: ./rebol3 ci-auth.r3
+
+    linux-auth-md5:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Install Rebol
+              uses: oldes/install-rebol@v3.18.0
+
+            - name: Build MD5 Postgres image
+              run: docker build -t postgres-md5 -f .github/ci/postgres-md5.Dockerfile .
+
+            - name: Start MD5-auth Postgres
+              run: |
+                  docker run -d --name postgres-md5 \
+                    -p 5441:5432 \
+                    -e POSTGRES_USER=postgres \
+                    -e POSTGRES_PASSWORD=password \
+                    -e POSTGRES_DB=postgres \
+                    -e POSTGRES_INITDB_ARGS="--auth-host=md5" \
+                    postgres-md5
+                  for i in {1..30}; do
+                    docker exec postgres-md5 pg_isready -U postgres && exit 0
+                    sleep 1
+                  done
+                  echo "Postgres MD5 did not become ready" >&2
+                  docker logs postgres-md5
+                  exit 1
+
+            - name: Focused tests (md5 allowed)
+              env:
+                  PG_URL: postgres://postgres:password@localhost:5441/postgres?auth=md5
+              run: ./rebol3 ci-auth.r3
+
+            - name: Focused tests (md5 denied)
+              env:
+                  PG_URL: postgres://postgres:password@localhost:5441/postgres?auth=md5
+                  PG_URL_DENY: postgres://postgres:password@localhost:5441/postgres?auth=scram
+              run: ./rebol3 ci-auth.r3
+
+    linux-auth-cleartext:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Install Rebol
+              uses: oldes/install-rebol@v3.18.0
+
+            - name: Build cleartext Postgres image
+              run: docker build -t postgres-cleartext -f .github/ci/postgres-cleartext.Dockerfile .
+
+            - name: Start cleartext-auth Postgres
+              run: |
+                  docker run -d --name postgres-cleartext \
+                    -p 5442:5432 \
+                    -e POSTGRES_USER=postgres \
+                    -e POSTGRES_PASSWORD=password \
+                    -e POSTGRES_DB=postgres \
+                    -e POSTGRES_INITDB_ARGS="--auth-host=password" \
+                    -e POSTGRES_HOST_AUTH_METHOD=password \
+                    postgres-cleartext
+                  for i in {1..30}; do
+                    docker exec postgres-cleartext pg_isready -U postgres && exit 0
+                    sleep 1
+                  done
+                  echo "Postgres cleartext did not become ready" >&2
+                  docker logs postgres-cleartext
+                  exit 1
+
+            - name: Focused tests (cleartext allowed)
+              env:
+                  PG_URL: postgres://postgres:password@localhost:5442/postgres?auth=cleartext
+              run: ./rebol3 ci-auth.r3
+
+            - name: Focused tests (cleartext denied)
+              env:
+                  PG_URL: postgres://postgres:password@localhost:5442/postgres?auth=cleartext
+                  PG_URL_DENY: postgres://postgres:password@localhost:5442/postgres?auth=scram,md5
+              run: ./rebol3 ci-auth.r3
+
+    linux-tls:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+
+            - name: Install Rebol
+              uses: oldes/install-rebol@v3.18.0
+
+            - name: Build TLS-enabled Postgres image
+              run: docker build -t postgres-tls -f .github/ci/postgres-tls.Dockerfile .
+
+            - name: Start TLS-enabled Postgres
+              run: |
+                  docker run -d --name postgres-tls \
+                    -p 5433:5432 \
+                    -e POSTGRES_USER=postgres \
+                    -e POSTGRES_PASSWORD=password \
+                    -e POSTGRES_DB=postgres \
+                    postgres-tls
+                  for i in {1..30}; do
+                    docker exec postgres-tls pg_isready -U postgres && exit 0
+                    sleep 1
+                  done
+                  echo "Postgres TLS did not become ready" >&2
+                  docker logs postgres-tls
+                  exit 1
+
+            - name: Test Rebol/Postgres protocol over TLS
+              env:
+                  PG_URL: postgres://postgres:password@localhost:5433/postgres?sslmode=require
+              run: ./rebol3 ci-test.r3

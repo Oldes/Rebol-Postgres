@@ -8,5 +8,5 @@
 !/sqlite
 !README.md
 !LICENSE
-!ci-test.r3
+!ci-*
 !sqlite-scheme.reb
