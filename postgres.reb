@@ -1010,7 +1010,7 @@ build-result: func [
 ][
 	cols: collect [
 		foreach col ctx/RowDescription [
-			keep compose #[
+			keep compose/only #[
 				name: (col/1)
 				table-oid: (col/2)
 				attr-number: (col/3)
