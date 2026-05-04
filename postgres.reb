@@ -395,7 +395,7 @@ process-responses: function[
 						;; pg/state: 'AuthenticationSASLFinal
 						tmp: to string! binary/read bin len - 8
 						unless all [
-							parse tmp ["v=" tmp: to end] 
+							parse tmp ["v=" tmp: to end]
 							ctx/sasl/ServerSignature == debase tmp 64
 						][
 							sys/log/error 'POSTGRES "Final authentication failed!"
@@ -1443,7 +1443,7 @@ pg-conn-awake: function [event][
 			][
 				finish-inflight pg
 			]
-			
+
 			true
 		]
 		wrote [
@@ -1488,7 +1488,7 @@ sys/make-scheme [
 	awake: func [event /local port parent ctx] [
 		;@@TODO: review this... it should be handle event from an inner TCP connection..
 		sys/log/debug 'POSTGRES ["Awake:^[[22m" event/type]
-		
+
 		port: event/port
 		ctx: port/extra
 		switch event/type [
@@ -1583,6 +1583,10 @@ sys/make-scheme [
 				]
 			]
 			port/extra/user: user
+			;; sasl/user suffers a self-referential binding issue inside the object
+			;; literal (the word 'user is rebound to sasl's own field, which is none).
+			;; Set it explicitly here after the object is fully constructed.
+			port/extra/sasl/user: user
 			params: parse-query-params spec/query
 			allowed-auth: any [
 				all [select params 'auth parse-auth-list select params 'auth]
@@ -1636,6 +1640,15 @@ sys/make-scheme [
 			handshake-timeout: any [connect-timeout 10]
 			unless port? wait [conn handshake-timeout][
 				sys/log/error 'POSTGRES "Failed to connect!"
+			]
+
+			;; If the handshake or authentication failed the awake handler calls
+			;; `close port`, which sets port/extra to none.  Surface that as a
+			;; proper error instead of letting the next path access crash.
+			unless port/extra [
+				cause-error 'Access 'Protocol make map! reduce [
+					'message "PostgreSQL connection failed during handshake (check server logs for details)"
+				]
 			]
 
 			; Optional session initialization (after open succeeds).
@@ -1804,7 +1817,7 @@ sys/make-scheme [
 				]
 			]
 		]
-		
+
 		read: func [
 			port [port!]
 			/local ctx
