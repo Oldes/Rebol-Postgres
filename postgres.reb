@@ -74,7 +74,7 @@ authenticate: funct [ctx] [
 	response
 ]
 
-md5-password: func [
+md5-password: funct [
 	"Compute PostgreSQL MD5 auth response"
 	user     [string!]
 	password [string!]
@@ -1033,7 +1033,10 @@ build-result: func [
 			row-count: to integer! last parts
 		]
 	]
-	result: compose #[
+	;; compose/only is required here: rows, cols and notices are all blocks.
+	;; Plain compose would splice their contents into the map literal instead
+	;; of inserting each block as a single value.
+	result: compose/only #[
 		rows: (rows)
 		columns: (cols)
 		command-tag: (tag)
