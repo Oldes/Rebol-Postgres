@@ -162,7 +162,7 @@ make-parse-message: func [
 	stmt-name [any-type!]
 	query [string!]
 	param-oids [block! none!]
-	/local oids msg count cs-stmt cs-query
+	/local oids msg count cs-stmt cs-query oid
 ][
 	oids: any [param-oids copy []]
 	msg: clear make binary! (64 + length? query)
@@ -173,7 +173,8 @@ make-parse-message: func [
 	count: length? oids
 	binary/write tail msg [UI16 :count]
 	foreach oid oids [
-		binary/write tail msg [UI32 to integer! oid]
+		oid: to integer! oid
+		binary/write tail msg [UI32 :oid]
 	]
 	msg
 ]
@@ -194,7 +195,7 @@ make-bind-message: func [
 	portal-name [any-type!]
 	stmt-name [any-type!]
 	params [block!]
-	/local msg p enc cs-portal cs-stmt count
+	/local msg p enc cs-portal cs-stmt count size
 ][
 	msg: clear make binary! 128
 	cs-portal: make-cstring portal-name
@@ -212,7 +213,8 @@ make-bind-message: func [
 			binary/write tail msg [SI32 -1]
 		][
 			enc: to binary! enc
-			binary/write tail msg [SI32 length? enc BYTES :enc]
+			size: length? enc
+			binary/write tail msg [SI32 :size BYTES :enc]
 		]
 	]
 	binary/write tail msg [
@@ -948,6 +950,7 @@ parse-sslmode: func [
 
 make-sslrequest: func [
 	"Build SSLRequest packet (len=8, code=80877103)"
+	/local req
 ][
 	req: make binary! 8
 	binary/write req [
@@ -1324,7 +1327,7 @@ pg-conn-awake: function [event][
 			;-- If TCP connect and SSL is enabled, negotiate SSLRequest first.
 			if all [
 				ctx/options
-				select ctx/options 'sslmode <> 'disable
+				(select ctx/options 'sslmode) <> 'disable
 				none? select ctx/options 'ssl-state
 				'tcp = either word? conn/scheme [conn/scheme][conn/scheme/name]
 			][
@@ -1347,7 +1350,7 @@ pg-conn-awake: function [event][
 			;-- Handle 1-byte SSLRequest response before protocol parsing.
 			if all [
 				ctx/options
-				select ctx/options 'ssl-state = 'sslrequest
+				(select ctx/options 'ssl-state) = 'sslrequest
 				'tcp = either word? conn/scheme [conn/scheme][conn/scheme/name]
 			][
 				data: take/all conn/data
@@ -1362,12 +1365,12 @@ pg-conn-awake: function [event][
 						put ctx/options 'ssl-state 'tls
 						pg/state: 'TLS
 						;-- Wrap existing TCP connection with TLS scheme.
-						tls: make port! [
+						tls: make port! compose [
 							scheme: 'tls
-							conn: conn
-							host: conn/spec/host
-							port: conn/spec/port
-							ref:  rejoin [tls:// host #":" port]
+							conn: (conn)
+							host: (conn/spec/host)
+							port: (conn/spec/port)
+							ref:  (rejoin [tls:// conn/spec/host #":" conn/spec/port])
 						]
 						tls/parent: pg
 						tls/awake: :pg-conn-awake
@@ -1387,7 +1390,7 @@ pg-conn-awake: function [event][
 					#"N" [
 						sys/log/more 'POSTGRES "Server refused SSLRequest."
 						put ctx/options 'ssl-state 'plaintext
-						if select ctx/options 'sslmode = 'require [
+						if (select ctx/options 'sslmode) = 'require [
 							ctx/error: make map! reduce [
 								'message "Server does not support TLS (SSLRequest refused) and sslmode=require"
 							]
@@ -1492,6 +1495,10 @@ sys/make-scheme [
 		sys/log/debug 'POSTGRES ["Awake:^[[22m" event/type]
 
 		port: event/port
+		; TLS dispatches inner connection events through its parent's awake.
+		unless 'postgres = either word? port/scheme [port/scheme][port/scheme/name] [
+			return pg-conn-awake event
+		]
 		ctx: port/extra
 		switch event/type [
 			ready [
@@ -1640,7 +1647,7 @@ sys/make-scheme [
 			open conn
 			;; wait for the handshake...
 			handshake-timeout: any [connect-timeout 10]
-			unless port? wait [conn handshake-timeout][
+			unless port? wait [port handshake-timeout][
 				sys/log/error 'POSTGRES "Failed to connect!"
 			]
 
@@ -1650,6 +1657,12 @@ sys/make-scheme [
 			unless port/extra [
 				cause-error 'Access 'Protocol make map! reduce [
 					'message "PostgreSQL connection failed during handshake (check server logs for details)"
+				]
+			]
+			unless all [port/extra/authenticated? port/extra/ReadyForQuery] [
+				cause-error 'Access 'Protocol any [
+					port/extra/error
+					make map! reduce ['message "PostgreSQL handshake did not complete"]
 				]
 			]
 

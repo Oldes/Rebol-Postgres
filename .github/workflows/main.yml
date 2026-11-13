@@ -38,6 +38,17 @@ jobs:
             - name: Install Rebol
               uses: oldes/install-rebol@v3.18.0
 
+            - name: Focused tests (protocol packets)
+              run: ./rebol3 ci-packets.r3
+
+            - name: Focused tests (queries, transactions, cursors, async)
+              run: ./rebol3 ci-integration.r3
+
+            - name: Required TLS rejects plaintext-only server
+              env:
+                  PG_URL: postgres://postgres:password@localhost/postgres?sslmode=require
+              run: ./rebol3 ci-tls-required.r3
+
             - name: Test Rebol/Postgres protocol
               run: ./rebol3 ci-test.r3
 
@@ -87,6 +98,11 @@ jobs:
               env:
                   PG_URL: postgres://postgres:password@localhost:5441/postgres?auth=md5
               run: ./rebol3 ci-auth.r3
+
+            - name: Focused integration tests (md5)
+              env:
+                  PG_URL: postgres://postgres:password@localhost:5441/postgres?auth=md5
+              run: ./rebol3 ci-integration.r3
 
             - name: Focused tests (md5 denied)
               env:
@@ -167,3 +183,8 @@ jobs:
               env:
                   PG_URL: postgres://postgres:password@localhost:5433/postgres?sslmode=require
               run: ./rebol3 ci-test.r3
+
+            - name: Assert TLS encryption and query behavior
+              env:
+                  PG_URL: postgres://postgres:password@localhost:5433/postgres?sslmode=require
+              run: ./rebol3 ci-integration.r3
