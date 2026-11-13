@@ -1434,6 +1434,14 @@ pg-conn-awake: function [event][
 					write conn take/part ctx/out-buffer 32000
 					return false
 				]
+				all [
+					not ctx/error
+					any [not ctx/authenticated? none? ctx/ReadyForQuery]
+				][
+					;; Startup messages may arrive in separate reads, even at packet boundaries.
+					read conn
+					return false
+				]
 				'else [
 					pg/state: 'READY
 				]

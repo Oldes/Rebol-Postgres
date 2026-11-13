@@ -41,6 +41,9 @@ jobs:
             - name: Focused tests (protocol packets)
               run: ./rebol3 ci-packets.r3
 
+            - name: Focused tests (startup reads)
+              run: python3 ci-handshake.py ./rebol3
+
             - name: Focused tests (queries, transactions, cursors, async)
               run: ./rebol3 ci-integration.r3
 
